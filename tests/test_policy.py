@@ -29,6 +29,11 @@ class Verification(unittest.TestCase):
         r = self.s.verify_sender("Claire Ellis", "555-0177")
         self.assertEqual((r["patient_id"], r["sender_role"]), ("P017", "caregiver"))
 
+    def test_unresolved_patient_name_says_so(self):
+        r = self.s.verify_sender("Claire Ellis", "555-0177", patient_name="Mom")
+        self.assertFalse(r["verified"])
+        self.assertIn("matches no patient", r["reason"])
+
     def test_third_party_not_verified(self):
         self.assertFalse(self.s.verify_sender("Mike", "555-0888", patient_name="Grace Park")["verified"])
 

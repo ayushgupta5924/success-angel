@@ -1,6 +1,7 @@
 """Process inbox messages with the agent.
 
-  python run.py                                  # Claude engine, all 40 sample messages
+  python run.py                                  # Gemini engine (free AI Studio key), all 40 sample messages
+  python run.py --engine claude                  # Claude engine (ANTHROPIC_API_KEY)
   python run.py --engine rules                   # offline baseline, no API key needed
   python run.py --only M003,M017                 # a subset
   python run.py --messages my_messages.json      # any file in the same format
@@ -47,6 +48,11 @@ def load_messages(args) -> list[dict]:
 def make_engine(name: str, effort: str, model: str | None):
     if name == "rules":
         return RulesEngine()
+    if name == "gemini":
+        if not os.environ.get("GEMINI_API_KEY"):
+            sys.exit("No GEMINI_API_KEY found (env or .env). Get a free one at https://aistudio.google.com/apikey.")
+        from agent.gemini_agent import MODEL as GEMINI_MODEL, GeminiEngine
+        return GeminiEngine(model=model or GEMINI_MODEL, effort=effort)
     if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
         sys.exit("No ANTHROPIC_API_KEY found (env or .env). Set one, or use --engine rules for the offline baseline.")
     from agent.claude_agent import MODEL, ClaudeEngine
@@ -55,7 +61,7 @@ def make_engine(name: str, effort: str, model: str | None):
 
 async def main(args) -> int:
     engine = make_engine(args.engine, args.effort, args.model)
-    fallback = RulesEngine() if args.engine == "claude" and not args.no_fallback else None
+    fallback = RulesEngine() if args.engine != "rules" and not args.no_fallback else None
     messages = load_messages(args)
     results, totals = [], {"cost_usd": 0.0, "seconds": 0.0, "turns": 0, "degraded": 0}
     async with clinic_session() as tools:
@@ -87,7 +93,8 @@ async def main(args) -> int:
                                  indent=2, ensure_ascii=False))
         state = await tools.harness("get_run_state")
 
-    out = Path(args.out or ROOT / "results" / f"{args.engine}_results.json")
+    default_out = f"{args.engine}_adhoc_results.json" if args.text else f"{args.engine}_results.json"
+    out = Path(args.out or ROOT / "results" / default_out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     out.with_name(out.stem.replace("_results", "") + "_run_state.json").write_text(
@@ -100,8 +107,8 @@ async def main(args) -> int:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--engine", choices=["claude", "rules"], default="claude")
-    p.add_argument("--model", help="override Claude model id")
+    p.add_argument("--engine", choices=["claude", "gemini", "rules"], default="gemini")
+    p.add_argument("--model", help="override the LLM model id")
     p.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
     p.add_argument("--messages", default=str(ROOT / "data" / "messages_sample.json"))
     p.add_argument("--only", help="comma-separated message ids")

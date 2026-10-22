@@ -1,7 +1,7 @@
 """Score agent results against labels_sample.json.
 
-  python eval.py results/claude_results.json     # writes results/claude_eval.md + claude_eval.json
-  python eval.py results/claude_holdout_results.json --labels data/labels_holdout.json
+  python eval.py results/gemini_results.json     # writes results/gemini_eval.md + gemini_eval.json
+  python eval.py results/gemini_holdout_results.json --labels data/labels_holdout.json
 
 Metrics: urgency accuracy, emergency recall/precision, action exact/superset match and
 micro P/R/F1, patient_id and intent accuracy, must_not violations, policy invariants
@@ -252,7 +252,7 @@ def main(path: str, labels_path: str) -> None:
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("results", nargs="?", default=str(ROOT / "results" / "claude_results.json"))
+    ap.add_argument("results", nargs="?", default=str(ROOT / "results" / "gemini_results.json"))
     ap.add_argument("--labels", default=str(ROOT / "data" / "labels_sample.json"))
     a = ap.parse_args()
     main(a.results, a.labels)

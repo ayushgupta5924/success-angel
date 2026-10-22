@@ -219,6 +219,12 @@ class ClinicStore:
                 "preferred_language": p["preferred_language"],
             }
 
+        if target_n and not any(target_n in (_norm(p["name"]), _norm(p["name"]).split()[0]) for p in self.patients):
+            self._log("verify_sender", verified=False, reason="patient_name_not_found")
+            return {"verified": False, "reason": f"patient_name {patient_name!r} matches no patient on file. Pass "
+                    "the patient's name as on file (find_patient can look it up), or omit patient_name to "
+                    "match on the sender's contact alone."}
+
         candidates = []
         for p in self.patients:
             cg = p.get("authorised_caregiver") or {}
